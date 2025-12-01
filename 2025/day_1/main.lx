@@ -1,0 +1,49 @@
+@module "main"
+
+@use "string" as string
+@use "time" as time
+@use "io" as io
+
+pub const main -> fn () int {
+    let speed: Timer = time::timer_start();
+
+    let rotations: *byte = io::read_file("/home/TheDevConnor/Luma-Advent-of-Code/2025/day_1/lock.txt");
+    let dial_size: int = 100;
+    let pos: int = 50;      // ← start at 50
+    let count: int = 0;     // ← how many times we hit 0
+    
+    defer { free(rotations); }
+    
+    loop [i: int = 0](rotations[i] != '\0') {
+        let dir: byte = rotations[i];   // read 'L' or 'R'
+        let steps: int = 0;
+        i++;                            // advance to first digit
+    
+        loop (rotations[i] >= '0' && rotations[i] <= '9') : (i++) {
+            steps = steps * 10 + (cast<int>(rotations[i]) - cast<int>('0'));
+        }
+    
+        loop (rotations[i] == ' '  || 
+              rotations[i] == '\n' || 
+              rotations[i] == '\r') : (i++) {}
+    
+        // apply rotation
+        switch(dir) {
+          'L' -> {
+              pos = (pos - steps) % dial_size;
+              if (pos < 0) pos = pos + dial_size;
+          }
+          'R' -> pos = (pos + steps) % dial_size;
+          _ -> {
+              io::print_byte("Invalid direction: %c\n", [dir]);
+              return 1;
+          }
+        }
+    
+        if (pos == 0) count++;
+    }
+    
+    let elapsed: int = time::timer_elapsed_ms(speed);
+    io::print_int("'%d' Took %dms\n", [count, elapsed]);
+    return 0;
+}
