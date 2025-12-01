@@ -7,7 +7,7 @@
 pub const main -> fn () int {
     let speed: Timer = time::timer_start();
 
-    let rotations: *byte = io::read_file("/home/TheDevConnor/Luma-Advent-of-Code/2025/day_1/lock.txt");
+    let rotations: *byte = io::read_file("lock.txt");
     let dial_size: int = 100;
     let pos: int = 50;
     let count: int = 0;
