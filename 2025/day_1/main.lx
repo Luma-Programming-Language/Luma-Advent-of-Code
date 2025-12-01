@@ -4,18 +4,14 @@
 @use "time" as time
 @use "io" as io
 
-pub const main -> fn () int {
-    let speed: Timer = time::timer_start();
-
-    let rotations: *byte = io::read_file("lock.txt");
+// Part 1: Count only when dial ends at 0 after a rotation
+const solve_part1 -> fn (rotations: *byte) int {
     let dial_size: int = 100;
     let pos: int = 50;
     let count: int = 0;
     
-    defer { free(rotations); }
-    
     loop [i: int = 0](rotations[i] != '\0') {
-        let dir: byte = rotations[i];   // read 'L' or 'R'
+        let dir: byte = rotations[i];
         let steps: int = 0;
         i++;
     
@@ -32,14 +28,93 @@ pub const main -> fn () int {
           'R' -> pos = (pos + steps) % dial_size;
           _ -> {
               io::print_byte("Invalid direction: %c\n", [dir]);
-              return 1;
+              return -1;
           }
         }
-    
+        
+        if (pos < 0) pos = pos + dial_size;
         if (pos == 0) count++;
     }
     
+    return count;
+}
+
+// Part 2: Count every time dial lands on 0 during any click
+const solve_part2 -> fn (rotations: *byte) int {
+    let dial_size: int = 100;
+    let pos: int = 50;
+    let count: int = 0;
+    
+    loop [i: int = 0](rotations[i] != '\0') {
+        let dir: byte = rotations[i];
+        let steps: int = 0;
+        i++;
+    
+        loop (rotations[i] >= '0' && rotations[i] <= '9') : (i++) {
+            steps = steps * 10 + (cast<int>(rotations[i]) - cast<int>('0'));
+        }
+    
+        loop (rotations[i] == ' '  || 
+              rotations[i] == '\n' || 
+              rotations[i] == '\r') : (i++) {}
+    
+        if (steps == 0) continue;
+        
+        // How many complete 100-step cycles?
+        let full_cycles: int = steps / dial_size;
+        let remaining: int = steps % dial_size;
+        
+        switch(dir) {
+          'L' -> {
+              // Each full cycle lands on 0 once
+              count = count + full_cycles;
+              
+              // For remaining steps, check if we land on 0
+              // We land on 0 if remaining > pos (need to wrap past 0)
+              // Special case: if pos == 0, we don't count it (we start there)
+              if (pos > 0 && remaining >= pos) 
+                count++;
+              
+              // Update position
+              pos = (pos - steps) % dial_size;
+              if (pos < 0) pos = pos + dial_size;
+          }
+          'R' -> {
+              // Each full cycle lands on 0 once
+              count = count + full_cycles;
+              
+              // For remaining steps, check if we land on 0
+              // We land on 0 if pos + remaining >= 100
+              if (pos + remaining >= dial_size) 
+                count++;
+              
+              // Update position
+              pos = (pos + steps) % dial_size;
+          }
+          _ -> {
+              io::print_byte("Invalid direction: %c\n", [dir]);
+              return -1;
+          }
+        }
+    }
+    
+    return count;
+}
+
+pub const main -> fn () int {
+    let speed: Timer = time::timer_start();
+
+    let rotations: *byte = io::read_file("lock.txt");
+    defer { free(rotations); }
+    
+    let part1: int = solve_part1(rotations);
+    let part2: int = solve_part2(rotations);
+    
     let elapsed: int = time::timer_elapsed_ms(speed);
-    io::print_int("'%d' Took %dms\n", [count, elapsed]);
+    
+    io::print_int("Part 1: %d\n", [part1]);
+    io::print_int("Part 2: %d\n", [part2]);
+    io::print_int("Took %dms\n", [elapsed]);
+    
     return 0;
 }
