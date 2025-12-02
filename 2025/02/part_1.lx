@@ -1,0 +1,120 @@
+@module "main"
+
+@use "string" as string
+@use "time" as time
+@use "io" as io
+
+const Range -> struct {
+  lo: int,
+  hi: int,
+};
+
+const in_range -> fn (x: int, ranges: *Range, count: int) int {
+  loop [i: int = 0](i < count) : (++i) {
+    if (x >= ranges[i].lo && x <= ranges[i].hi) return 1;
+  }
+  return 0;
+}
+
+const num_digits -> fn (x: int) int {
+  let d: int = 0;
+  let temp: int = x;
+  loop (temp != 0) : (++d) { temp = temp / 10; }
+  return d;
+}
+
+const parse_ranges -> fn (pattern: *byte, ranges: *Range) int {
+  let count: int = 0;
+
+  loop [i: int = 0](pattern[i] != '\0') {
+    loop (pattern[i] == ',' || pattern[i] == ' ' || pattern[i] == '\n') { ++i; }
+
+    // parse left number
+    let a: int = 0;
+    loop (pattern[i] >= '0' && pattern[i] <= '9') : (++i) {
+      a = a * 10 + (cast<int>(pattern[i]) - cast<int>('0'));
+    }
+
+    if (pattern[i] == '-') ++i;
+
+    // parse right number
+    let b: int = 0;
+    loop (pattern[i] >= '0' && pattern[i] <= '9') : (++i) {
+        b = b * 10 + (cast<int>(pattern[i]) - cast<int>('0'));
+    }
+
+    ranges[count] = Range{ lo: a, hi: b };
+    ++count;
+
+    if (pattern[i] == ',') ++i;
+  }
+
+  return count;
+}
+
+// Generate a number by repeating pattern 'reps' times
+const repeat_pattern -> fn (pattern: int, reps: int) int {
+  let pattern_digits: int = num_digits(pattern);
+  let multiplier: int = 1;
+  loop [i: int = 0](i < pattern_digits) : (++i) {
+    multiplier = multiplier * 10;
+  }
+  
+  let result: int = 0;
+  loop [i: int = 0](i < reps) : (++i) {
+    result = result * multiplier + pattern;
+  }
+  return result;
+}
+
+pub const main -> fn () int { 
+  let pattern: *byte = io::read_file("input.txt");
+  let ranges: *Range = cast<*Range>(alloc(1000 * sizeof<Range>));
+  defer { free(pattern); free(ranges); }
+
+  let count: int = parse_ranges(pattern, ranges);
+
+  let global_lo: int = ranges[0].lo;
+  let global_hi: int = ranges[0].hi;
+
+  loop [i: int = 1](i < count) : (++i) {
+    if (ranges[i].lo < global_lo) global_lo = ranges[i].lo;
+    if (ranges[i].hi > global_hi) global_hi = ranges[i].hi;
+  }
+
+  let min_digits: int = num_digits(global_lo);
+  let max_digits: int = num_digits(global_hi);
+
+  // Part 1: patterns repeated exactly twice (even length only)
+  let part1_total: int = 0;
+  loop [len: int = min_digits](len <= max_digits) : (++len) {
+    if (len % 2 != 0) continue;
+
+    let half: int = len / 2;
+
+    let start: int = 1;
+    loop [i: int = 1](i < half) : (++i) { start = start * 10; }
+
+    let end: int = start * 10 - 1;
+
+    loop [s: int = start](s <= end) : (++s) {
+      let temp: int = s;
+      let d: int = 0;
+      loop (temp != 0) : (++d) { temp = temp / 10; }
+
+      let multiplier: int = 1;
+      loop [i: int = 0](i < d) : (++i) { multiplier = multiplier * 10; }
+
+      let num: int = s * multiplier + s;
+      if (num > global_hi) break;
+
+      if (in_range(num, ranges, count) == 1) {
+        part1_total = part1_total + num;
+      }
+    }
+  }
+  
+  io::print_int("Part 1: %d\n", [part1_total]);
+
+  return 0; 
+}
