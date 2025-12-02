@@ -100,6 +100,8 @@ const has_smaller_pattern -> fn (num: int, current_pattern_len: int) int {
 }
 
 pub const main -> fn () int { 
+  let speed: Timer = time::timer_start();
+
   let pattern: *byte = io::read_file("input.txt");
   let ranges: *Range = cast<*Range>(alloc(1000 * sizeof<Range>));
   defer { free(pattern); free(ranges); }
@@ -150,7 +152,7 @@ pub const main -> fn () int {
     }
   }
 
-  io::print_int("Part 2: %d\n", [part2_total]);
+  io::print_int("Part 2: %d; Took %dms\n", [part2_total, time::timer_elapsed_ms(speed)]);
 
   return 0; 
 }
