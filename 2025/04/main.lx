@@ -1,0 +1,79 @@
+@module "main"
+
+@use "string" as string
+@use "io" as io
+
+const MAX_ROWS: int = 200;
+const MAX_COLS: int = 200;
+
+pub const main -> fn () int {
+  let usr_input: *byte = io::read_file("input.txt"); 
+  let grid: **byte = cast<**byte>(alloc(MAX_ROWS * sizeof<*byte>));
+loop [i: int = 0](i < MAX_ROWS) : (++i) {
+  grid[i] = cast<*byte>(alloc(MAX_COLS * sizeof<byte>));
+}
+
+  defer { 
+    free(usr_input);
+
+    loop [i: int = 0](i < MAX_ROWS) : (++i) {
+      free(grid[i]);
+    }
+    free(grid);
+  }
+
+  let row: int = 0;
+  let col: int = 0;
+
+  let rows: int = 0;
+  let cols: int = 0;
+
+  loop [i: int = 0](usr_input[i] != '\0') : (++i) {
+    if (usr_input[i] == '\n') {
+      grid[row][col] = '\0';
+      if (col > 0) { if (cols == 0) cols = col; }
+      ++row;
+      col = 0;
+    } else {
+      grid[row][col] = usr_input[i];
+      ++col;
+    }
+  }
+
+  if (col > 0) {
+    grid[row][col] = '\0';
+    if (cols == 0) cols = col;
+    ++row;
+  }
+
+  rows = row;
+
+  let accessible_count: int = 0;
+  let directions: [[int; 2]; 8] = [
+    [-1, -1], [-1, 0], [-1, 1], // NW N NE
+    [0, -1],           [0, 1],  //  W   E
+    [1, -1],  [1, 0],  [1, 1]   // SW S SE
+  ];
+
+  loop [r: int = 0](r < rows) : (++r) {
+    loop [c: int = 0](c < cols) : (++c) {
+      if (grid[r][c] == '@') {
+        let neighbor_count: int = 0;
+  
+        loop [d: int = 0](d < 8) : (++d) {
+          let nr: int = r + directions[d][0];
+          let nc: int = c + directions[d][1];
+  
+          if (nr >= 0 && nr < rows && nc >= 0 && nc < cols)
+            if (grid[nr][nc] == '@') neighbor_count++;
+        }
+        
+        if (neighbor_count < 4) accessible_count++;
+      }
+    }
+  }
+
+  io::print_int("Number of accessible '@' cells: %d\n", [accessible_count]);
+
+  return 0;
+}
