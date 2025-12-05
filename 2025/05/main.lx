@@ -2,6 +2,7 @@
 
 @use "string" as string
 @use "parser" as parser
+@use "time" as time
 @use "io" as io
 
 const part_1 -> fn (data: ParseResult) int {
@@ -70,11 +71,14 @@ const part_2 -> fn (data: ParseResult) int {
 }
 
 pub const main -> fn () int {
+  let speed: Timer = time::timer_start();
   let data: ParseResult = parser::parse_input("input.txt");
   defer { free(data.ranges); free(data.ids); }
-
+  
+  let elapsed: int = time::timer_elapsed_ms(speed);
   io::print_int("Fresh ingredients: %d\n", [part_1(data)]);
   io::print_int("Total fresh ingredient IDs: %d\n", [part_2(data)]);
+  io::print_int("Took %dms\n", [elapsed]);
 
   return 0;
 }
