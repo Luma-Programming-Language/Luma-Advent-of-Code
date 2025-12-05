@@ -1,0 +1,80 @@
+@module "main"
+
+@use "string" as string
+@use "parser" as parser
+@use "io" as io
+
+const part_1 -> fn (data: ParseResult) int {
+  let fresh_count: int = 0;
+  
+  // Check each ID against all ranges
+  loop [idx: int = 0](idx < data.id_count) : (++idx) {
+    let current_id: int = data.ids[idx];
+    let is_fresh: int = 0;
+    
+    // Check if this ID falls within any range
+    loop [j: int = 0](j < data.range_count) : (++j) {
+      if (current_id >= data.ranges[j].start && current_id <= data.ranges[j].end) {
+        is_fresh = 1;
+        break;
+      }
+    }
+    
+    if (is_fresh == 1) {
+      ++fresh_count;
+    }
+  }
+  
+  return fresh_count; 
+}
+
+const part_2 -> fn (data: ParseResult) int {
+  // Sort ranges by start position (simple bubble sort)
+  loop [pass: int = 0](pass < data.range_count - 1) : (++pass) {
+    loop [j: int = 0](j < data.range_count - pass - 1) : (++j) {
+      if (data.ranges[j].start > data.ranges[j+1].start) {
+        let temp: Ranges = data.ranges[j];
+        data.ranges[j] = data.ranges[j+1];
+        data.ranges[j+1] = temp;
+      }
+    }
+  }
+
+  // Merge overlapping ranges and count total IDs
+  let total_ids: int = 0;
+  
+  if (data.range_count > 0) {
+    let merged_start: int = data.ranges[0].start;
+    let merged_end: int = data.ranges[0].end;
+    
+    loop [idx: int = 1](idx < data.range_count) : (++idx) {
+      // Check if current range overlaps or is adjacent to merged range
+      if (data.ranges[idx].start <= merged_end + 1) {
+        // Extend the merged range if needed
+        if (data.ranges[idx].end > merged_end) {
+          merged_end = data.ranges[idx].end;
+        }
+      } else {
+        // No overlap, count the merged range and start a new one
+        total_ids = total_ids + (merged_end - merged_start + 1);
+        merged_start = data.ranges[idx].start;
+        merged_end = data.ranges[idx].end;
+      }
+    }
+    
+    // Don't forget to count the last merged range
+    total_ids = total_ids + (merged_end - merged_start + 1);
+  }
+
+  return total_ids; 
+}
+
+pub const main -> fn () int {
+  let data: ParseResult = parser::parse_input("input.txt");
+  defer { free(data.ranges); free(data.ids); }
+
+  io::print_int("Fresh ingredients: %d\n", [part_1(data)]);
+  io::print_int("Total fresh ingredient IDs: %d\n", [part_2(data)]);
+
+  return 0;
+}

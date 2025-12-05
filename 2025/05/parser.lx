@@ -1,0 +1,117 @@
+@module "parser"
+
+@use "io" as io
+
+pub const Ranges -> struct {
+  start: int,
+  end: int,
+};
+
+pub const ParseResult -> struct {
+  ranges: *Ranges,
+  range_count: int,
+  ids: *int,
+  id_count: int,
+};
+
+#returns_ownership
+pub const parse_input -> fn (filename: *byte) ParseResult {
+  let usr_input: *byte = io::read_file(filename);
+  defer { free(usr_input); }
+  
+  let range_count: int = 0;
+  let range_capacity: int = 100;
+  let ranges: *Ranges = cast<*Ranges>(alloc(range_capacity * sizeof<Ranges>));
+
+  let id_count: int = 0;
+  let id_capacity: int = 1000;
+  let ids: *int = cast<*int>(alloc(id_capacity * sizeof<int>));
+
+  // Find the blank line position first
+  let blank_line_pos: int = -1;
+  loop [i: int = 0](usr_input[i] != '\0') : (++i) {
+    if (usr_input[i] == '\n' && usr_input[i+1] == '\n') {
+      blank_line_pos = i + 2;
+      break;
+    }
+  }
+
+  // Parse ranges (before blank line)
+  let i: int = 0;
+  loop (i < blank_line_pos && usr_input[i] != '\0') {
+    // Skip whitespace
+    if (usr_input[i] == ' ' || usr_input[i] == '\t' || usr_input[i] == '\n') {
+      ++i;
+      continue;
+    }
+    
+    if (i >= blank_line_pos || usr_input[i] == '\0') break;
+
+    // Expand ranges array if needed
+    if (range_count >= range_capacity) {
+      range_capacity = range_capacity * 2;
+      let old: *Ranges = ranges;
+      ranges = cast<*Ranges>(alloc(range_capacity * sizeof<Ranges>));
+      loop [j: int = 0](j < range_count) : (++j) {
+        ranges[j] = old[j];
+      }
+      free(old);
+    }
+
+    let start: int = 0;
+    loop (usr_input[i] >= '0' && usr_input[i] <= '9') : (++i) {
+      start = start * 10 + (cast<int>(usr_input[i]) - cast<int>('0'));
+    }
+
+    if (usr_input[i] == '-') ++i;
+
+    let end: int = 0;
+    loop (usr_input[i] >= '0' && usr_input[i] <= '9') : (++i) {
+      end = end * 10 + (cast<int>(usr_input[i]) - cast<int>('0'));
+    }
+
+    ranges[range_count] = Ranges{ start: start, end: end};
+    ++range_count;
+  }
+
+  // Parse IDs (after blank line)
+  if (blank_line_pos != -1) {
+    i = blank_line_pos;
+    loop (usr_input[i] != '\0') {
+      // Skip whitespace
+      if (usr_input[i] == ' ' || usr_input[i] == '\t' || usr_input[i] == '\n') {
+        ++i;
+        continue;
+      }
+      
+      if (usr_input[i] == '\0') break;
+
+      // Expand ids array if needed
+      if (id_count >= id_capacity) {
+        id_capacity = id_capacity * 2;
+        let old: *int = ids;
+        ids = cast<*int>(alloc(id_capacity * sizeof<int>));
+        loop [j: int = 0](j < id_count) : (++j) {
+          ids[j] = old[j];
+        }
+        free(old);
+      }
+
+      let id: int = 0;
+      loop (usr_input[i] >= '0' && usr_input[i] <= '9') : (++i) {
+        id = id * 10 + (cast<int>(usr_input[i]) - cast<int>('0'));
+      }
+
+      ids[id_count] = id;
+      ++id_count;
+    }
+  }
+
+  return ParseResult{
+    ranges: ranges,
+    range_count: range_count,
+    ids: ids,
+    id_count: id_count
+  };
+}
+
